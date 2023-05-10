@@ -23,6 +23,18 @@ impl ObjectSyms {
         let mut undefineds = HashSet::new();
         let mut kept_syms_list = String::new();
         let mut has_exported_symbols = false;
+        let mut kept_obj = false;
+
+        if keep_or_remove == ArmergeKeepOrRemove::KeepObjects {
+            let filename_cow = object_path.file_name().unwrap().to_string_lossy();
+            let filename: &str = filename_cow.as_ref();
+            for regex in regexes {
+                if regex.is_match(filename) {
+                    kept_obj = true;
+                    break;
+                }
+            }
+        }
 
         let data = std::fs::read(object_path)?;
         let file = object::File::parse(data.as_slice()).map_err(|e| MergeError::InvalidObject {
@@ -50,17 +62,25 @@ impl ObjectSyms {
             }
 
             if let Ok(name) = sym.name() {
-                for regex in regexes {
-                    let keep_sym_condition = if keep_or_remove == ArmergeKeepOrRemove::KeepSymbols {
-                        regex.is_match(name)
-                    } else {
-                        !regex.is_match(name)
-                    };
-                    if keep_sym_condition {
+                if keep_or_remove == ArmergeKeepOrRemove::KeepObjects {
+                    if kept_obj {
                         has_exported_symbols = true;
                         kept_syms_list += name;
                         kept_syms_list.push('\n');
-                        break;
+                    }
+                } else {
+                    for regex in regexes {
+                        let keep_sym_condition = if keep_or_remove == ArmergeKeepOrRemove::KeepSymbols {
+                            regex.is_match(name)
+                        } else {
+                            !regex.is_match(name)
+                        };
+                        if keep_sym_condition {
+                            has_exported_symbols = true;
+                            kept_syms_list += name;
+                            kept_syms_list.push('\n');
+                            break;
+                        }
                     }
                 }
             }

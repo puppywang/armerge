@@ -29,6 +29,7 @@ pub struct ArMerger {
 pub enum ArmergeKeepOrRemove {
     KeepSymbols,
     RemoveSymbols,
+    KeepObjects,
 }
 
 impl ArMerger {

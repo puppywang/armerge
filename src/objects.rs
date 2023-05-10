@@ -58,7 +58,7 @@ pub fn merge(
     let mut merged_path = objects.dir.path().to_owned();
     merged_path.push(merged_name);
 
-    if keep_or_remove == ArmergeKeepOrRemove::KeepSymbols {
+    if keep_or_remove != ArmergeKeepOrRemove::RemoveSymbols {
         // When filtering symbols to keep just the public API visible,
         // we must make an exception for the unwind symbols (if linked statically)
         regexes.push(Regex::new("^_?_Unwind_.*").expect("Failed to compile Regex"));

@@ -22,6 +22,10 @@ struct Opt {
     #[structopt(short, long, parse(from_os_str))]
     output: PathBuf,
 
+    /// Filter objects by name instead of symbols.
+    #[structopt(short, long)]
+    filter_objects: bool,
+
     /// Print verbose information
     #[structopt(short, long)]
     verbose: bool,
@@ -75,7 +79,12 @@ fn err_main(opt: Opt) -> Result<(), Box<dyn Error>> {
                 .into_iter()
                 .map(|s| Regex::new(&s))
                 .collect::<Result<Vec<_>, _>>()?;
-            merger.merge_and_localize(ArmergeKeepOrRemove::KeepSymbols, keep_symbols)?;
+            let flag = if opt.filter_objects {
+                ArmergeKeepOrRemove::KeepObjects
+            } else {
+                ArmergeKeepOrRemove::KeepSymbols
+            };
+            merger.merge_and_localize(flag, keep_symbols)?;
         },
         (true, false) => {
             let remove_symbols: Vec<Regex> = opt

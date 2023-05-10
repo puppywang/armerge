@@ -55,8 +55,19 @@ pub fn create_symbol_filter_list(
             path: object_path.to_owned(),
             inner: e,
         })?;
+        let mut kept_obj = false;
+        if keep_or_remove == ArmergeKeepOrRemove::KeepObjects {
+            let filename_cow = object_path.file_name().unwrap().to_string_lossy();
+            let filename: &str = filename_cow.as_ref();
+            for regex in regexes {
+                if regex.is_match(filename) {
+                    kept_obj = true;
+                    break;
+                }
+            }
+        }
         'next_symbol: for sym in file.symbols() {
-            if keep_or_remove == ArmergeKeepOrRemove::KeepSymbols
+            if keep_or_remove != ArmergeKeepOrRemove::RemoveSymbols
                 && (!sym.is_global()
                     || sym.is_undefined()
                     || (sym.kind() != SymbolKind::Text
@@ -66,21 +77,29 @@ pub fn create_symbol_filter_list(
                 continue;
             }
             if let Ok(name) = sym.name() {
-                for regex in regexes {
-                    if regex.is_match(name) {
-                        if keep_or_remove == ArmergeKeepOrRemove::KeepSymbols {
-                            kept_count += 1;
-                        } else {
-                            filter_syms.insert(name.to_owned());
-                        }
-                        continue 'next_symbol;
+                if keep_or_remove == ArmergeKeepOrRemove::KeepObjects {
+                    if kept_obj {
+                        kept_count += 1;
+                    } else {
+                        filter_syms.insert(name.to_owned());
                     }
-                }
-
-                if keep_or_remove == ArmergeKeepOrRemove::KeepSymbols {
-                    filter_syms.insert(name.to_owned());
                 } else {
-                    kept_count += 1;
+                    for regex in regexes {
+                        if regex.is_match(name) {
+                            if keep_or_remove != ArmergeKeepOrRemove::RemoveSymbols {
+                                kept_count += 1;
+                            } else {
+                                filter_syms.insert(name.to_owned());
+                            }
+                            continue 'next_symbol;
+                        }
+                    }
+
+                    if keep_or_remove != ArmergeKeepOrRemove::RemoveSymbols {
+                        filter_syms.insert(name.to_owned());
+                    } else {
+                        kept_count += 1;
+                    }
                 }
             }
         }
